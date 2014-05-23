@@ -19,8 +19,8 @@ def getaddrinfo(*args):
 socket.getaddrinfo = getaddrinfo
 
 
-# Using StringIO with callback to measure upload progress
 class CallbackStringIO(StringIO):
+    """Using StringIO with callback to measure upload progress"""
 
     def __init__(self, num, th, d, buf='', log=None):
         # Force self.buf to be a string or unicode

@@ -83,11 +83,10 @@ class TeSpeed(object):
         self.test_speed()
 
     def distance(self, one, two):
-    #Calculate the great circle distance between two points
-    #on the earth specified in decimal degrees (haversine formula)
-    #(http://stackoverflow.com/posts/4913653/revisions)
-    # convert decimal degrees to radians
-
+        """
+        Compute the great circle distance between two points on the earth specified in decimal degrees `haversine
+        formula <http://stackoverflow.com/posts/4913653/revisions)>`_ convert decimal degrees to radians.
+        """
         lon1, lat1, lon2, lat2 = map(radians, [one[0], one[1], two[0], two[1]])
         # haversine formula
         dlon = lon2 - lon1
@@ -98,7 +97,7 @@ class TeSpeed(object):
         return km
 
     def closest(self, center, points, num=5):
-    # Returns object that is closest to center
+        """Return object that is closest to center."""
         closest = {}
         for p in xrange(len(points)):
             now = self.distance(center, [points[p]['lat'], points[p]['lon']])
@@ -109,21 +108,20 @@ class TeSpeed(object):
                 else:
                     break
             closest[now] = points[p]
-        n = 0
-        ret = []
+        closest_objects = []
+        # FIXME can be simplified
         for key in sorted(closest):
-            ret.append(closest[key])
-            n += 1
-            if n >= num and num != 0:
+            closest_objects.append(closest[key])
+            if len(closest_objects) >= num and num != 0:
                 break
-        return ret
+        return closest_objects
 
     def test_latency(self, servers):
-    # Finding servers with lowest latency
+        """Find servers with lowest latency."""
         self.log.debug('Testing latency...\n')
         po = []
         for server in servers:
-            now = self.test_single_latency(server['url'] + 'latency.txt?x=' + str(time.time()))*1000
+            now = self.test_single_latency(server['url'] + 'latency.txt?x=' + str(time.time())) * 1000
             now = now / 2  # Evil hack or just pure stupidity? Nobody knows...
             if now == -1 or now == 0:
                 continue
@@ -153,8 +151,7 @@ class TeSpeed(object):
         return po
 
     def test_single_latency(self, dest_addr):
-    # Checking latency for single server
-    # Does that by loading latency.txt (empty page)
+        """Check latency for single server. Does that by loading latency.txt (empty page)."""
         request = self.get_request(dest_addr)
 
         average_time = 0
@@ -177,34 +174,29 @@ class TeSpeed(object):
         return average_time / total
 
     def get_request(self, uri):
-    # Generates a GET request to be used with urlopen
-        req = urllib2.Request(uri, headers=self.headers)
-        return req
+        """Generate a GET request to be used with urlopen."""
+        return urllib2.Request(uri, headers=self.headers)
 
     def post_request(self, uri, stream):
-    # Generate a POST request to be used with urlopen
-        req = urllib2.Request(uri, stream, headers=self.headers)
-        return req
+        """Generate a POST request to be used with urlopen."""
+        return urllib2.Request(uri, stream, headers=self.headers)
 
     def chunk_report(self, bytes_so_far, chunk_size, total_size, num, th, d, w):
-    # Receiving status update from download thread
+        """Receive status update from download thread."""
 
-        if w == 1:
-            return
-        d[num] = bytes_so_far
-        down = 0
-        for i in xrange(th):
-            down = down + d.get(i, 0)
+        if w != 1:
+            d[num] = bytes_so_far
+            down = 0
+            for i in xrange(th):
+                down = down + d.get(i, 0)
 
-        if num == 0 or down >= total_size * th:
+            if num == 0 or down >= total_size * th:
+                percent = round(down / (total_size * th) * 100, 2)
+                self.log.debug('Downloaded %d of %d bytes (%0.2f%%) in %d threads\r' %
+                               (down, total_size*th, percent, th))
 
-            percent = down / (total_size * th)
-            percent = round(percent * 100, 2)
-
-            self.log.debug('Downloaded %d of %d bytes (%0.2f%%) in %d threads\r' % (down, total_size*th, percent, th))
-
-        #if down >= total_size*th:
-        #   self.log.debug('\n')
+            #if down >= total_size*th:
+            #   self.log.debug('\n')
 
     def chunk_read(self, response, num, th, d, w=0, chunk_size=False, report_hook=None):
         # self.log.debug('Thread num %d %d %d starting to report\n' % (th, num, d))
@@ -215,8 +207,7 @@ class TeSpeed(object):
         if w == 1:
             return [0, 0, 0]
 
-        total_size = response.info().getheader('Content-Length').strip()
-        total_size = int(total_size)
+        total_size = int(response.info().getheader('Content-Length').strip())
         bytes_so_far = 0
 
         start = 0
@@ -275,7 +266,7 @@ class TeSpeed(object):
         conn.close()
 
     def load_config(self):
-    # Load the configuration file
+        """Load the configuration file."""
         self.log.debug('Loading speedtest configuration...\n')
         uri = 'http://speedtest.net/speedtest-config.php?x=' + str(time.time())
         request = self.get_request(uri)
@@ -294,7 +285,7 @@ class TeSpeed(object):
         return {'ip': ip, 'lat': lat, 'lon': lon, 'isp': isp}
 
     def load_servers(self):
-    # Load server list
+        """Load server list."""
         self.log.debug('Loading server list...\n')
         uri = 'http://speedtest.net/speedtest-servers.php?x=' + str(time.time())
         request = self.get_request(uri)
@@ -320,7 +311,7 @@ class TeSpeed(object):
         return server_list
 
     def decompress_response(sefl, response):
-    # Decompress gzipped response
+        """Decompress gzipped response."""
         data = StringIO(response.read())
         gzipper = gzip.GzipFile(fileobj=data)
         return gzipper.read()
@@ -335,7 +326,9 @@ class TeSpeed(object):
     def async_request(self, url, num, upload=0):
         connections = []
         d = Manager().dict()
-        start = time.time()
+
+        start_time = time.time()
+
         for i in xrange(num):
             full_url = self.servers[i % len(self.servers)] + url
             #print full_url
@@ -350,7 +343,7 @@ class TeSpeed(object):
             connections[c]['size'], connections[c]['start'], connections[c]['end'] = connections[c]['parent'].recv()
             connections[c]['connection'].join()
 
-        end = time.time()
+        end_time = time.time()
 
         self.log.debug('                                                                                           \r')
 
@@ -359,30 +352,25 @@ class TeSpeed(object):
         for c in xrange(num):
             if connections[c]['end'] is not False:
                 #tspeed=tspeed+(connections[c]['size']/(connections[c]['end']-connections[c]['start']))
-                sizes = sizes + connections[c]['size']
+                sizes += connections[c]['size']
 
                 # Using more precise times for downloads
                 if upload == 0:
                     if c == 0:
-                        start = connections[c]['start']
-                        end = connections[c]['end']
+                        start_time = connections[c]['start']
+                        end_time = connections[c]['end']
                     else:
-                        if connections[c]['start'] < start:
-                            start = connections[c]['start']
-                        if connections[c]['end'] > end:
-                            end = connections[c]['end']
+                        if connections[c]['start'] < start_time:
+                            start_time = connections[c]['start']
+                        if connections[c]['end'] > end_time:
+                            end_time = connections[c]['end']
 
-        took = end - start
-
-        return [sizes, took]
+        return [sizes, end_time - start_time]
 
     def test_upload(self):
-    # Testing upload speed
-
-        url = 'upload.php?x=' + str(time.time())
-
-        sizes, took = [0, 0]
-        data = ''
+        """Test upload speed."""
+        data, url = '', 'upload.php?x=' + str(time.time())
+        sizes = took = 0
         for i in xrange(0, len(self.UPLOAD_SIZES)):
             if len(data) == 0 or self.UPLOAD_SIZES[i] != self.UPLOAD_SIZES[i-1]:
                 #self.log.debug('Generating new string to upload. Length: %d\n' % (self.UPLOAD_SIZES[i]))
@@ -429,7 +417,7 @@ class TeSpeed(object):
         return data / 1024 ** 2 * (1 if self.unit == 1 else 1.048576 * 8)
 
     def test_download(self):
-    # Testing download speed
+        """Test download speed."""
         sizes, took = [0, 0]
         for i in xrange(0, len(self.DOWNLOAD_LIST)):
             url = 'random' + self.DOWNLOAD_LIST[i] + '.jpg?x=' + str(time.time()) + '&y=3'
@@ -501,10 +489,8 @@ class TeSpeed(object):
 def main(args):
 
     if args.use_proxy:
-        if args.use_proxy == 5:
-            set_proxy(typ=socks.PROXY_TYPE_SOCKS5, host=args.proxy_host, port=args.proxy_port)
-        else:
-            set_proxy(typ=socks.PROXY_TYPE_SOCKS4, host=args.proxy_host, port=args.proxy_port)
+        set_proxy(typ=socks.PROXY_TYPE_SOCKS5 if args.use_proxy == 5 else socks.PROXY_TYPE_SOCKS4, host=args.proxy_host,
+                  port=args.proxy_port)
 
     if args.listservers:
         args.store = True
