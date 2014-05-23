@@ -609,14 +609,8 @@ def main(args):
     else:
         print_debug('Getting ready\n')
     try:
-        TeSpeed(
-            args.listservers and 'list-servers' or args.server,
-            args.listservers, args.servercount,
-            args.store and True or False,
-            args.suppress and True or False,
-            args.unit and True or False,
-            chunksize=args.chunksize
-        )
+        TeSpeed(args.listservers and 'list-servers' or args.server, args.listservers, args.servercount, args.store,
+                args.suppress, args.unit, chunksize=args.chunksize)
     except (KeyboardInterrupt, SystemExit):
         print_debug('\nTesting stopped.\n')
         #raise
@@ -626,9 +620,9 @@ if __name__ == '__main__':
 
     parser.add_argument('server', nargs='?', type=str, default='', help='Use the specified server for testing (skip checking for location and closest server).')
     parser.add_argument('-ls', '--list-servers', dest='listservers', nargs='?', default=0, const=10, help='List the servers sorted by distance, nearest first. Optionally specify number of servers to show.')
-    parser.add_argument('-w', '--csv', dest='store', action='store_const', const=True, help='Print CSV formated output to STDOUT.')
-    parser.add_argument('-s', '--suppress', dest='suppress', action='store_const', const=True, help='Suppress debugging (STDERR) output.')
-    parser.add_argument('-mib', '--mebibit', dest='unit', action='store_const', const=True, help='Show results in mebibits.')
+    parser.add_argument('-w', '--csv', dest='store', action='store_true', help='Print CSV formated output to STDOUT.')
+    parser.add_argument('-s', '--suppress', dest='suppress', action='store_true', help='Suppress debugging (STDERR) output.')
+    parser.add_argument('-mib', '--mebibit', dest='unit', action='store_true', help='Show results in mebibits.')
     parser.add_argument('-n', '--server-count', dest='servercount', nargs='?', default=1, const=1, help='Specify how many different servers should be used in paralel. (Default: 1) (Increase it for >100Mbit testing.)')
 
     parser.add_argument('-p', '--proxy', dest='use_proxy', type=int, nargs='?', const=4, help='Specify 4 or 5 to use SOCKS4 or SOCKS5 proxy.')
