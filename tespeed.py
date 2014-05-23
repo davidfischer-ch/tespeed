@@ -1,66 +1,18 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 # Copyright:
 #   2012-2013 Janis Jansons (janis.jansons@janhouse.lv)
 #   2014      David Fischer (david.fischer.ch@gmail.com)
 
-import argparse, socket
-from SocksiPy import socks
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-# Magic!
-def getaddrinfo(*args):
-    return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (args[0], args[1]))]
-socket.getaddrinfo = getaddrinfo
-
-import gzip, urllib, urllib2, sys, time
+import argparse, gzip, urllib, urllib2, time
 from lxml import etree
 from math import radians, cos, sin, asin, sqrt
 from multiprocessing import Process, Pipe, Manager
-from StringIO import StringIO
 
-
-# Using StringIO with callback to measure upload progress
-class CallbackStringIO(StringIO):
-
-    def __init__(self, num, th, d, buf=''):
-        # Force self.buf to be a string or unicode
-        if not isinstance(buf, basestring):
-            buf = str(buf)
-        self.buf = buf
-        self.len = len(buf)
-        self.buflist = []
-        self.pos = 0
-        self.closed = False
-        self.softspace = 0
-        self.th = th
-        self.num = num
-        self.d = d
-        self.total = self.len*self.th
-
-    def read(self, n=10240):
-        next = StringIO.read(self, n)
-        #if 'done' in self.d:
-        #    return
-
-        self.d[self.num] = self.pos
-        down = 0
-        for i in range(self.th):
-            down = down + self.d.get(i, 0)
-        if self.num == 0:
-            percent = float(down) / (self.total)
-            percent = round(percent*100, 2)
-            print_debug('Uploaded %d of %d bytes (%0.2f%%) in %d threads\r' % (down, self.total, percent, self.th))
-
-        #if down >= self.total:
-        #    print_debug('\n')
-        #    self.d['done']=1
-
-        return next
-
-    def __len__(self):
-        return self.len
+from utils import CallbackStringIO, StringIO, print_debug, print_result, set_proxy, socks
 
 
 class TeSpeed(object):
@@ -99,7 +51,7 @@ class TeSpeed(object):
         self.store = store
         self.suppress = suppress
         if store:
-            print_debug('Printing CSV formated results to STDOUT.\n')
+            print_debug(args, 'Printing CSV formated results to STDOUT.\n')
         self.numTop = int(numTop)
         #~ self.downList=['350x350', '500x500', '750x750', '1000x1000',
             #~ '1500x1500', '2000x2000', '2000x2000', '2500x2500', '3000x3000',
@@ -154,7 +106,7 @@ class TeSpeed(object):
         # haversine formula
         dlon = lon2 - lon1
         dlat = lat2 - lat1
-        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
         c = 2 * asin(sqrt(a))
         km = 6367 * c
         return km
@@ -182,14 +134,14 @@ class TeSpeed(object):
 
     def test_latency(self, servers):
     # Finding servers with lowest latency
-        print_debug('Testing latency...\n')
+        print_debug(args, 'Testing latency...\n')
         po = []
         for server in servers:
             now = self.test_single_latency(server['url'] + 'latency.txt?x=' + str(time.time()))*1000
             now = now / 2  # Evil hack or just pure stupidity? Nobody knows...
             if now == -1 or now == 0:
                 continue
-            print_debug('%0.0f ms latency for %s (%s, %s, %s) [%0.2f km]\n' %
+            print_debug(args, '%0.0f ms latency for %s (%s, %s, %s) [%0.2f km]\n' %
                         (now, server['url'], server['sponsor'], server['name'], server['country'], server['distance']))
 
             server['latency'] = now
@@ -259,17 +211,17 @@ class TeSpeed(object):
 
         if num == 0 or down >= total_size * th:
 
-            percent = float(down) / (total_size * th)
+            percent = down / (total_size * th)
             percent = round(percent * 100, 2)
 
-            print_debug('Downloaded %d of %d bytes (%0.2f%%) in %d threads\r' %
+            print_debug(args, 'Downloaded %d of %d bytes (%0.2f%%) in %d threads\r' %
                         (down, total_size*th, percent, th))
 
         #if down >= total_size*th:
-        #   print_debug('\n')
+        #   print_debug(args, '\n')
 
     def chunk_read(self, response, num, th, d, w=0, chunk_size=False, report_hook=None):
-        #print_debug('Thread num %d %d %d starting to report\n' % (th, num, d))
+        #print_debug(args, 'Thread num %d %d %d starting to report\n' % (th, num, d))
 
         if not chunk_size:
             chunk_size = self.chunksize
@@ -285,7 +237,7 @@ class TeSpeed(object):
         while 1:
             chunk = 0
             if start == 0:
-                #print_debug('Started receiving data\n')
+                #print_debug(args, 'Started receiving data\n')
                 chunk = response.read(1)
                 start = time.time()
 
@@ -312,7 +264,7 @@ class TeSpeed(object):
             response = urllib2.urlopen(request, timeout=30)
             size, start, end = self.chunk_read(response, num, th, d, report_hook=self.chunk_report)
         #except urllib2.URLError, e:
-        #    print_debug('Failed downloading.\n')
+        #    print_debug(args, 'Failed downloading.\n')
         except:
             print_debug('                                                                                           \r')
             print_debug('Failed downloading.\n')
@@ -335,10 +287,10 @@ class TeSpeed(object):
             response = urllib2.urlopen(request, timeout=30)
             size, start, end = self.chunk_read(response, num, th, d, 1, report_hook=self.chunk_report)
         #except urllib2.URLError:
-        #    print_debug('Failed uploading.\n')
+        #    print_debug(args, 'Failed uploading.\n')
         except:
-            print_debug('                                                                                           \r')
-            print_debug('Failed uploading.\n')
+            print_debug(args, '                                                                                           \r')
+            print_debug(args, 'Failed uploading.\n')
             conn.send([0, 0, False])
             conn.close()
             return
@@ -348,7 +300,7 @@ class TeSpeed(object):
 
     def load_config(self):
     # Load the configuration file
-        print_debug('Loading speedtest configuration...\n')
+        print_debug(args, 'Loading speedtest configuration...\n')
         uri = 'http://speedtest.net/speedtest-config.php?x=' + str(time.time())
         request = self.get_request(uri)
         response = urllib2.urlopen(request)
@@ -361,13 +313,13 @@ class TeSpeed(object):
         lat = float(config.find('client').attrib['lat'])
         lon = float(config.find('client').attrib['lon'])
 
-        print_debug('IP: %s; Lat: %f; Lon: %f; ISP: %s\n' % (ip, lat, lon, isp))
+        print_debug(args, 'IP: %s; Lat: %f; Lon: %f; ISP: %s\n' % (ip, lat, lon, isp))
 
         return {'ip': ip, 'lat': lat, 'lon': lon, 'isp': isp}
 
     def load_servers(self):
     # Load server list
-        print_debug('Loading server list...\n')
+        print_debug(args, 'Loading server list...\n')
         uri = 'http://speedtest.net/speedtest-servers.php?x=' + str(time.time())
         request = self.get_request(uri)
         response = urllib2.urlopen(request)
@@ -398,7 +350,7 @@ class TeSpeed(object):
         return gzipper.read()
 
     def find_best_server(self):
-        print_debug('Looking for closest and best server...\n')
+        print_debug(args, 'Looking for closest and best server...\n')
         best = self.test_latency(self.closest([self.config['lat'], self.config['lon']],
                                  self.server_list, self.bestServers))
         for server in best:
@@ -413,10 +365,8 @@ class TeSpeed(object):
             #print full_url
             connection = {}
             connection['parent'], connection['child'] = Pipe()
-            if upload == 1:
-                connection['connection'] = Process(target=self.async_post, args=(connection['child'], full_url, i, num, d))
-            else:
-                connection['connection'] = Process(target=self.async_get, args=(connection['child'], full_url, i, num, d))
+            connection['connection'] = Process(target=self.async_post if upload == 1 else self.async_get,
+                                               args=(connection['child'], full_url, i, num, d))
             connection['connection'].start()
             connections.append(connection)
 
@@ -426,7 +376,7 @@ class TeSpeed(object):
 
         end = time.time()
 
-        print_debug('                                                                                           \r')
+        print_debug(args, '                                                                                           \r')
 
         sizes = 0
         #tspeed=0
@@ -459,7 +409,7 @@ class TeSpeed(object):
         data = ''
         for i in range(0, len(self.upSizes)):
             if len(data) == 0 or self.upSizes[i] != self.upSizes[i-1]:
-                #print_debug('Generating new string to upload. Length: %d\n' % (self.upSizes[i]))
+                #print_debug(args, 'Generating new string to upload. Length: %d\n' % (self.upSizes[i]))
                 data = ''.join('1' for x in xrange(self.upSizes[i]))
             self.postData = urllib.urlencode({'upload6': data})
 
@@ -487,8 +437,8 @@ class TeSpeed(object):
 
             size = self.speed_conversion(sizes)
             speed = size / took
-            print_debug('Upload size: %0.2f MiB; Uploaded in %0.2f s\n' % (size, took))
-            print_debug('\033[92mUpload speed: %0.2f %s/s\033[0m\n' % (speed, self.units))
+            print_debug(args, 'Upload size: %0.2f MiB; Uploaded in %0.2f s\n' % (size, took))
+            print_debug(args, '\033[92mUpload speed: %0.2f %s/s\033[0m\n' % (speed, self.units))
 
             if self.up_speed < speed:
                 self.up_speed = speed
@@ -496,20 +446,16 @@ class TeSpeed(object):
             if took > 5:
                 break
 
-        #print_debug('Upload size: %0.2f MiB; Uploaded in %0.2f s\n' % (self.speed_conversion(sizes), took))
-        #print_debug('Upload speed: %0.2f MiB/s\n' % (self.speed_conversion(sizes)/took))
+        #print_debug(args, 'Upload size: %0.2f MiB; Uploaded in %0.2f s\n' % (self.speed_conversion(sizes), took))
+        #print_debug(args, 'Upload speed: %0.2f MiB/s\n' % (self.speed_conversion(sizes)/took))
 
     def speed_conversion(self, data):
-        if self.unit == 1:
-            result = (float(data) / 1024 / 1024)
-        else:
-            result = (float(data) / 1024 / 1024) * 1.048576 * 8
-        return result
+        return data / 1024 ** 2 * (1 if self.unit == 1 else 1.048576 * 8)
 
     def test_download(self):
     # Testing download speed
         sizes, took = [0, 0]
-        for i in range(0, len(self.downList)):
+        for i in xrange(0, len(self.downList)):
             url = 'random' + self.downList[i] + '.jpg?x=' + str(time.time()) + '&y=3'
 
             if i < 2:
@@ -536,8 +482,8 @@ class TeSpeed(object):
 
             size = self.speed_conversion(sizes)
             speed = size / took
-            print_debug('Download size: %0.2f MiB; Downloaded in %0.2f s\n' % (size, took))
-            print_debug('\033[91mDownload speed: %0.2f %s/s\033[0m\n' % (speed, self.units))
+            print_debug(args, 'Download size: %0.2f MiB; Downloaded in %0.2f s\n' % (size, took))
+            print_debug(args, '\033[91mDownload speed: %0.2f %s/s\033[0m\n' % (speed, self.units))
 
             if self.down_speed < speed:
                 self.down_speed = speed
@@ -545,8 +491,8 @@ class TeSpeed(object):
             if took > 5:
                 break
 
-        #print_debug('Download size: %0.2f MiB; Downloaded in %0.2f s\n' % (self.speed_conversion(sizes), took))
-        #print_debug('Download speed: %0.2f %s/s\n' % (self.speed_conversion(sizes)/took, self.units))
+        #print_debug(args, 'Download size: %0.2f MiB; Downloaded in %0.2f s\n' % (self.speed_conversion(sizes), took))
+        #print_debug(args, 'Download speed: %0.2f %s/s\n' % (self.speed_conversion(sizes)/took, self.units))
 
     def test_speed(self):
 
@@ -564,32 +510,16 @@ class TeSpeed(object):
         self.test_download()
         self.test_upload()
 
-        print_result('%0.2f,%0.2f,"%s","%s"\n' % (self.down_speed, self.up_speed, self.units, self.servers))
+        print_result(args, '%0.2f,%0.2f,"%s","%s"\n' % (self.down_speed, self.up_speed, self.units, self.servers))
 
     def list_servers(self, num=0):
 
-        allSorted = self.closest([self.config['lat'], self.config['lon']], self.server_list, num)
+        all_sorted = self.closest([self.config['lat'], self.config['lon']], self.server_list, num)
 
-        for i in range(0, len(allSorted)):
-            print_result('%s. %s (%s, %s, %s) [%0.2f km]\n' %
-                         (i + 1, allSorted[i]['url'], allSorted[i]['sponsor'], allSorted[i]['name'],
-                          allSorted[i]['country'], allSorted[i]['distance']))
-
-
-def print_debug(string):
-    if not args.suppress:
-        sys.stderr.write(string.encode('utf8'))
-
-
-def print_result(string):
-    if args.store:
-        sys.stdout.write(string.encode('utf8'))
-
-
-# Thanks to Ryan Sears for http://bit.ly/17HhSli
-def set_proxy(typ=socks.PROXY_TYPE_SOCKS4, host='127.0.0.1', port=9050):
-    socks.setdefaultproxy(typ, host, port)
-    socket.socket = socks.socksocket
+        for i in xrange(0, len(all_sorted)):
+            print_result(args, '%s. %s (%s, %s, %s) [%0.2f km]\n' %
+                         (i + 1, all_sorted[i]['url'], all_sorted[i]['sponsor'], all_sorted[i]['name'],
+                          all_sorted[i]['country'], all_sorted[i]['distance']))
 
 
 def main(args):
@@ -604,14 +534,14 @@ def main(args):
         args.store = True
 
     if not args.listservers and args.server == '' and not args.store:
-        print_debug('Getting ready. Use parameter -h or --help to see available features.\n')
+        print_debug(args, 'Getting ready. Use parameter -h or --help to see available features.\n')
     else:
-        print_debug('Getting ready\n')
+        print_debug(args, 'Getting ready\n')
     try:
         TeSpeed(args.listservers and 'list-servers' or args.server, args.listservers, args.servercount, args.store,
                 args.suppress, args.unit, chunksize=args.chunksize)
     except (KeyboardInterrupt, SystemExit):
-        print_debug('\nTesting stopped.\n')
+        print_debug(args, '\nTesting stopped.\n')
         #raise
 
 if __name__ == '__main__':
