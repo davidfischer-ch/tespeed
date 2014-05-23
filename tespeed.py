@@ -65,7 +65,7 @@ class CallbackStringIO(StringIO):
         return self.len
 
 
-class TeSpeed:
+class TeSpeed(object):
 
     def __init__(self, server="", numTop=0, servercount=3, store=False, suppress=False, unit=False, chunksize=10240):
 
