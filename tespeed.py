@@ -400,9 +400,9 @@ class TeSpeed(object):
         data = ''
         for i in range(0, len(self.UPLOAD_SIZES)):
             if len(data) == 0 or self.UPLOAD_SIZES[i] != self.UPLOAD_SIZES[i-1]:
-                #self.log.debug('Generating new string to upload. Length: %d\n' % (self.upSizes[i]))
+                #self.log.debug('Generating new string to upload. Length: %d\n' % (self.UPLOAD_SIZES[i]))
                 data = ''.join('1' for x in xrange(self.UPLOAD_SIZES[i]))
-            self.postData = urllib.urlencode({'upload6': data})
+            self.post_data = urllib.urlencode({'upload6': data})
 
             if i < 2:
                 thrds = 1
