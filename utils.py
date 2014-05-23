@@ -22,7 +22,7 @@ socket.getaddrinfo = getaddrinfo
 # Using StringIO with callback to measure upload progress
 class CallbackStringIO(StringIO):
 
-    def __init__(self, num, th, d, buf=''):
+    def __init__(self, num, th, d, buf='', log=None):
         # Force self.buf to be a string or unicode
         if not isinstance(buf, basestring):
             buf = str(buf)
@@ -36,6 +36,7 @@ class CallbackStringIO(StringIO):
         self.num = num
         self.d = d
         self.total = self.len*self.th
+        self.log = log
 
     def read(self, n=10240):
         next_chunk = StringIO.read(self, n)
@@ -49,10 +50,12 @@ class CallbackStringIO(StringIO):
         if self.num == 0:
             percent = down / self.total
             percent = round(percent * 100, 2)
-            print_debug(None, 'Uploaded %d of %d bytes (%0.2f%%) in %d threads\r' % (down, self.total, percent, self.th))
+            if self.log:
+                self.log.debug('Uploaded %d of %d bytes (%0.2f%%) in %d threads\r' %
+                               (down, self.total, percent, self.th))
 
         #if down >= self.total:
-        #    print_debug('\n')
+        #    if self.log: self.log.debug('\n')
         #    self.d['done']=1
 
         return next_chunk
@@ -61,14 +64,19 @@ class CallbackStringIO(StringIO):
         return self.len
 
 
-def print_debug(args, string):
-    if not args or not args.suppress:
-        sys.stderr.write(string.encode('utf8'))
+class Log(object):
 
+    def __init__(self, suppress=False, store=False):
+        self.suppress = suppress
+        self.store = store
 
-def print_result(args, string):
-    if args.store:
-        sys.stdout.write(string.encode('utf8'))
+    def debug(self, string):
+        if not self.suppress:
+            sys.stderr.write(string.encode('utf8'))
+
+    def result(self, string):
+        if self.store:
+            sys.stdout.write(string.encode('utf8'))
 
 
 # Thanks to Ryan Sears for http://bit.ly/17HhSli
