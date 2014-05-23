@@ -59,25 +59,20 @@ class TeSpeed(object):
         }
 
         self.num_servers = servercount
-        self.servers = []
-        if server != '':
-            self.servers = [server]
-
+        self.servers = [] if server == '' else [server]
         self.server = server
-        self.down_speed = -1
-        self.up_speed = -1
-        self.latencycount = 10
+        self.down_speed = self.up_speed = -1
+        self.latency_count = 10
         self.best_servers = 5
-
-        self.units = 'Mbit'
-        self.unit = 0
-
         self.chunk_size = chunk_size
         self.log = log
 
         if unit:
             self.units = 'MiB'
             self.unit = 1
+        else:
+            self.units = 'Mbit'
+            self.unit = 0
 
         if log.store:
             log.debug('Printing CSV formated results to STDOUT.\n')
@@ -164,7 +159,7 @@ class TeSpeed(object):
 
         average_time = 0
         total = 0
-        for i in xrange(self.latencycount):
+        for i in xrange(self.latency_count):
             error = 0
             start_time = time.time()
             try:
@@ -244,13 +239,8 @@ class TeSpeed(object):
         return [bytes_so_far, start, end]
 
     def async_get(self, conn, uri, num, th, d):
-
         request = self.get_request(uri)
-
-        start = 0
-        end = 0
-        size = 0
-
+        start = end = size = 0
         try:
             response = urllib2.urlopen(request, timeout=30)
             size, start, end = self.chunk_read(response, num, th, d, report_hook=self.chunk_report)
@@ -262,7 +252,6 @@ class TeSpeed(object):
             conn.send([0, 0, False])
             conn.close()
             return
-
         conn.send([size, start, end])
         conn.close()
 
@@ -270,10 +259,7 @@ class TeSpeed(object):
         postlen = len(self.post_data)
         stream = CallbackStringIO(num, th, d, self.post_data, log=self.log)
         request = self.post_request(uri, stream)
-
-        start = 0
-        end = 0
-
+        start = end = 0
         try:
             response = urllib2.urlopen(request, timeout=30)
             size, start, end = self.chunk_read(response, num, th, d, 1, report_hook=self.chunk_report)
@@ -285,7 +271,6 @@ class TeSpeed(object):
             conn.send([0, 0, False])
             conn.close()
             return
-
         conn.send([postlen, start, end])
         conn.close()
 
