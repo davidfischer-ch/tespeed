@@ -47,7 +47,7 @@ class TeSpeed(object):
         1024*1024*2, 1024*1024*2, 1024*1024*2, 1024*1024*2
     ]
 
-    def __init__(self, server='', numTop=0, servercount=3, unit=False, chunksize=10240, log=None):
+    def __init__(self, server='', num_top=0, servercount=3, unit=False, chunk_size=10240, log=None):
 
         self.headers = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -67,12 +67,12 @@ class TeSpeed(object):
         self.down_speed = -1
         self.up_speed = -1
         self.latencycount = 10
-        self.bestServers = 5
+        self.best_servers = 5
 
         self.units = 'Mbit'
         self.unit = 0
 
-        self.chunksize = chunksize
+        self.chunk_size = chunk_size
         self.log = log
 
         if unit:
@@ -82,9 +82,9 @@ class TeSpeed(object):
         if log.store:
             log.debug('Printing CSV formated results to STDOUT.\n')
 
-        self.numTop = int(numTop)
+        self.num_top = int(num_top)
 
-        self.postData = ''
+        self.post_data = ''
         self.test_speed()
 
     def distance(self, one, two):
@@ -162,24 +162,24 @@ class TeSpeed(object):
     # Does that by loading latency.txt (empty page)
         request = self.get_request(dest_addr)
 
-        averagetime = 0
+        average_time = 0
         total = 0
         for i in range(self.latencycount):
             error = 0
-            startTime = time.time()
+            start_time = time.time()
             try:
                 urllib2.urlopen(request, timeout=5)
             except urllib2.URLError:
                 error = 1
 
             if error == 0:
-                averagetime = averagetime + (time.time() - startTime)
+                average_time = average_time + (time.time() - start_time)
                 total = total + 1
 
             if total == 0:
                 return False
 
-        return averagetime / total
+        return average_time / total
 
     def get_request(self, uri):
     # Generates a GET request to be used with urlopen
@@ -215,7 +215,7 @@ class TeSpeed(object):
         # self.log.debug('Thread num %d %d %d starting to report\n' % (th, num, d))
 
         if not chunk_size:
-            chunk_size = self.chunksize
+            chunk_size = self.chunk_size
 
         if w == 1:
             return [0, 0, 0]
@@ -267,8 +267,8 @@ class TeSpeed(object):
         conn.close()
 
     def async_post(self, conn, uri, num, th, d):
-        postlen = len(self.postData)
-        stream = CallbackStringIO(num, th, d, self.postData, log=self.log)
+        postlen = len(self.post_data)
+        stream = CallbackStringIO(num, th, d, self.post_data, log=self.log)
         request = self.post_request(uri, stream)
 
         start = 0
@@ -343,7 +343,7 @@ class TeSpeed(object):
     def find_best_server(self):
         self.log.debug('Looking for closest and best server...\n')
         best = self.test_latency(self.closest([self.config['lat'], self.config['lon']],
-                                 self.server_list, self.bestServers))
+                                 self.server_list, self.best_servers))
         for server in best:
             self.servers.append(server['url'])
 
@@ -490,7 +490,7 @@ class TeSpeed(object):
         if self.server == 'list-servers':
             self.config = self.load_config()
             self.server_list = self.load_servers()
-            self.list_servers(self.numTop)
+            self.list_servers(self.num_top)
             return
 
         if self.server == '':
@@ -531,7 +531,7 @@ def main(args):
         log.debug('Getting ready\n')
     try:
         TeSpeed(args.listservers and 'list-servers' or args.server, args.listservers, args.servercount, args.unit,
-                chunksize=args.chunksize, log=log)
+                chunk_size=args.chunksize, log=log)
     except (KeyboardInterrupt, SystemExit):
         log.debug('\nTesting stopped.\n')
         #raise
