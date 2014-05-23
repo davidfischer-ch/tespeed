@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-
 #!/usr/bin/env python2
-#
+
 # Copyright:
 #   2012-2013 Janis Jansons (janis.jansons@janhouse.lv)
 #   2014      David Fischer (david.fischer.ch@gmail.com)
@@ -217,7 +216,7 @@ class TeSpeed(object):
     def test_single_latency(self, dest_addr):
     # Checking latency for single server
     # Does that by loading latency.txt (empty page)
-        request = self.GetRequest(dest_addr)
+        request = self.get_request(dest_addr)
 
         averagetime = 0
         total = 0
@@ -370,7 +369,7 @@ class TeSpeed(object):
     # Load server list
         print_debug('Loading server list...\n')
         uri = 'http://speedtest.net/speedtest-servers.php?x=' + str(time.time())
-        request = self.GetRequest(uri)
+        request = self.get_request(uri)
         response = urllib2.urlopen(request)
 
         # Load etree from XML data
