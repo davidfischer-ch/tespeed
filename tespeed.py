@@ -144,9 +144,9 @@ class TeSpeed(object):
 ]
 
         self.postData = ""
-        self.TestSpeed()
+        self.test_speed()
 
-    def Distance(self, one, two):
+    def distance(self, one, two):
     #Calculate the great circle distance between two points
     #on the earth specified in decimal degrees (haversine formula)
     #(http://stackoverflow.com/posts/4913653/revisions)
@@ -161,11 +161,11 @@ class TeSpeed(object):
         km = 6367 * c
         return km
 
-    def Closest(self, center, points, num=5):
+    def closest(self, center, points, num=5):
     # Returns object that is closest to center
         closest = {}
         for p in range(len(points)):
-            now = self.Distance(center, [points[p]['lat'], points[p]['lon']])
+            now = self.distance(center, [points[p]['lat'], points[p]['lon']])
             points[p]['distance'] = now
             while True:
                 if now in closest:
@@ -182,12 +182,12 @@ class TeSpeed(object):
                 break
         return ret
 
-    def TestLatency(self, servers):
+    def test_latency(self, servers):
     # Finding servers with lowest latency
         print_debug("Testing latency...\n")
         po = []
         for server in servers:
-            now = self.TestSingleLatency(server['url'] + "latency.txt?x=" + str(time.time()))*1000
+            now = self.test_single_latency(server['url'] + "latency.txt?x=" + str(time.time()))*1000
             now = now / 2  # Evil hack or just pure stupidity? Nobody knows...
             if now == -1 or now == 0:
                 continue
@@ -215,7 +215,7 @@ class TeSpeed(object):
 
         return po
 
-    def TestSingleLatency(self, dest_addr):
+    def test_single_latency(self, dest_addr):
     # Checking latency for single server
     # Does that by loading latency.txt (empty page)
         request = self.GetRequest(dest_addr)
@@ -239,17 +239,17 @@ class TeSpeed(object):
 
         return averagetime / total
 
-    def GetRequest(self, uri):
+    def get_request(self, uri):
     # Generates a GET request to be used with urlopen
         req = urllib2.Request(uri, headers=self.headers)
         return req
 
-    def PostRequest(self, uri, stream):
+    def post_request(self, uri, stream):
     # Generate a POST request to be used with urlopen
         req = urllib2.Request(uri, stream, headers=self.headers)
         return req
 
-    def ChunkReport(self, bytes_so_far, chunk_size, total_size, num, th, d, w):
+    def chunk_report(self, bytes_so_far, chunk_size, total_size, num, th, d, w):
     # Receiving status update from download thread
 
         if w == 1:
@@ -270,7 +270,7 @@ class TeSpeed(object):
         #if down >= total_size*th:
         #   print_debug('\n')
 
-    def ChunkRead(self, response, num, th, d, w=0, chunk_size=False, report_hook=None):
+    def chunk_read(self, response, num, th, d, w=0, chunk_size=False, report_hook=None):
         #print_debug("Thread num %d %d %d starting to report\n" % (th, num, d))
 
         if not chunk_size:
@@ -302,9 +302,9 @@ class TeSpeed(object):
 
         return [bytes_so_far, start, end]
 
-    def AsyncGet(self, conn, uri, num, th, d):
+    def async_get(self, conn, uri, num, th, d):
 
-        request = self.GetRequest(uri)
+        request = self.get_request(uri)
 
         start = 0
         end = 0
@@ -312,7 +312,7 @@ class TeSpeed(object):
 
         try:
             response = urllib2.urlopen(request, timeout=30)
-            size, start, end = self.ChunkRead(response, num, th, d, report_hook=self.ChunkReport)
+            size, start, end = self.chunk_read(response, num, th, d, report_hook=self.chunk_report)
         #except urllib2.URLError, e:
         #    print_debug("Failed downloading.\n")
         except:
@@ -325,17 +325,17 @@ class TeSpeed(object):
         conn.send([size, start, end])
         conn.close()
 
-    def AsyncPost(self, conn, uri, num, th, d):
+    def async_post(self, conn, uri, num, th, d):
         postlen = len(self.postData)
         stream = CallbackStringIO(num, th, d, self.postData)
-        request = self.PostRequest(uri, stream)
+        request = self.post_request(uri, stream)
 
         start = 0
         end = 0
 
         try:
             response = urllib2.urlopen(request, timeout=30)
-            size, start, end = self.ChunkRead(response, num, th, d, 1, report_hook=self.ChunkReport)
+            size, start, end = self.chunk_read(response, num, th, d, 1, report_hook=self.chunk_report)
         #except urllib2.URLError:
         #    print_debug("Failed uploading.\n")
         except:
@@ -348,15 +348,15 @@ class TeSpeed(object):
         conn.send([postlen, start, end])
         conn.close()
 
-    def LoadConfig(self):
+    def load_config(self):
     # Load the configuration file
         print_debug("Loading speedtest configuration...\n")
         uri = "http://speedtest.net/speedtest-config.php?x=" + str(time.time())
-        request = self.GetRequest(uri)
+        request = self.get_request(uri)
         response = urllib2.urlopen(request)
 
         # Load etree from XML data
-        config = etree.fromstring(self.DecompressResponse(response))
+        config = etree.fromstring(self.decompress_response(response))
 
         ip = config.find("client").attrib['ip']
         isp = config.find("client").attrib['isp']
@@ -367,7 +367,7 @@ class TeSpeed(object):
 
         return {'ip': ip, 'lat': lat, 'lon': lon, 'isp': isp}
 
-    def LoadServers(self):
+    def load_servers(self):
     # Load server list
         print_debug("Loading server list...\n")
         uri = "http://speedtest.net/speedtest-servers.php?x=" + str(time.time())
@@ -375,7 +375,7 @@ class TeSpeed(object):
         response = urllib2.urlopen(request)
 
         # Load etree from XML data
-        servers_xml = etree.fromstring(self.DecompressResponse(response))
+        servers_xml = etree.fromstring(self.decompress_response(response))
         servers = servers_xml.find("servers").findall("server")
         server_list = []
 
@@ -393,20 +393,20 @@ class TeSpeed(object):
 
         return server_list
 
-    def DecompressResponse(sefl, response):
+    def decompress_response(sefl, response):
     # Decompress gzipped response
         data = StringIO(response.read())
         gzipper = gzip.GzipFile(fileobj=data)
         return gzipper.read()
 
-    def FindBestServer(self):
+    def find_best_server(self):
         print_debug("Looking for closest and best server...\n")
-        best = self.TestLatency(self.Closest([self.config['lat'], self.config['lon']],
-                                self.server_list, self.bestServers))
+        best = self.test_latency(self.closest([self.config['lat'], self.config['lon']],
+                                 self.server_list, self.bestServers))
         for server in best:
             self.servers.append(server['url'])
 
-    def AsyncRequest(self, url, num, upload=0):
+    def async_request(self, url, num, upload=0):
         connections = []
         d = Manager().dict()
         start = time.time()
@@ -416,9 +416,9 @@ class TeSpeed(object):
             connection = {}
             connection['parent'], connection['child'] = Pipe()
             if upload == 1:
-                connection['connection'] = Process(target=self.AsyncPost, args=(connection['child'], full_url, i, num, d))
+                connection['connection'] = Process(target=self.async_post, args=(connection['child'], full_url, i, num, d))
             else:
-                connection['connection'] = Process(target=self.AsyncGet, args=(connection['child'], full_url, i, num, d))
+                connection['connection'] = Process(target=self.async_get, args=(connection['child'], full_url, i, num, d))
             connection['connection'].start()
             connections.append(connection)
 
@@ -452,7 +452,7 @@ class TeSpeed(object):
 
         return [sizes, took]
 
-    def TestUpload(self):
+    def test_upload(self):
     # Testing upload speed
 
         url = "upload.php?x=" + str(time.time())
@@ -482,12 +482,12 @@ class TeSpeed(object):
             else:
                 thrds = 2
 
-            sizes, took = self.AsyncRequest(url, thrds, 1)
-            #sizes, took=self.AsyncRequest(url, (i<4 and 1 or (i<6 and 2 or (i<6 and 4 or 8))), 1)
+            sizes, took = self.async_request(url, thrds, 1)
+            #sizes, took=self.async_request(url, (i<4 and 1 or (i<6 and 2 or (i<6 and 4 or 8))), 1)
             if sizes == 0:
                 continue
 
-            size = self.SpeedConversion(sizes)
+            size = self.speed_conversion(sizes)
             speed = size / took
             print_debug("Upload size: %0.2f MiB; Uploaded in %0.2f s\n" % (size, took))
             print_debug("\033[92mUpload speed: %0.2f %s/s\033[0m\n" % (speed, self.units))
@@ -498,17 +498,17 @@ class TeSpeed(object):
             if took > 5:
                 break
 
-        #print_debug("Upload size: %0.2f MiB; Uploaded in %0.2f s\n" % (self.SpeedConversion(sizes), took))
-        #print_debug("Upload speed: %0.2f MiB/s\n" % (self.SpeedConversion(sizes)/took))
+        #print_debug("Upload size: %0.2f MiB; Uploaded in %0.2f s\n" % (self.speed_conversion(sizes), took))
+        #print_debug("Upload speed: %0.2f MiB/s\n" % (self.speed_conversion(sizes)/took))
 
-    def SpeedConversion(self, data):
+    def speed_conversion(self, data):
         if self.unit == 1:
             result = (float(data) / 1024 / 1024)
         else:
             result = (float(data) / 1024 / 1024) * 1.048576 * 8
         return result
 
-    def TestDownload(self):
+    def test_download(self):
     # Testing download speed
         sizes, took = [0, 0]
         for i in range(0, len(self.downList)):
@@ -531,12 +531,12 @@ class TeSpeed(object):
             else:
                 thrds = 2
 
-            sizes, took = self.AsyncRequest(url, thrds)
-            #sizes, took=self.AsyncRequest(url, (i<1 and 2 or (i<6 and 4 or (i<10 and 6 or 8))) )
+            sizes, took = self.async_request(url, thrds)
+            #sizes, took=self.async_request(url, (i<1 and 2 or (i<6 and 4 or (i<10 and 6 or 8))) )
             if sizes == 0:
                 continue
 
-            size = self.SpeedConversion(sizes)
+            size = self.speed_conversion(sizes)
             speed = size / took
             print_debug("Download size: %0.2f MiB; Downloaded in %0.2f s\n" % (size, took))
             print_debug("\033[91mDownload speed: %0.2f %s/s\033[0m\n" % (speed, self.units))
@@ -547,30 +547,30 @@ class TeSpeed(object):
             if took > 5:
                 break
 
-        #print_debug("Download size: %0.2f MiB; Downloaded in %0.2f s\n" % (self.SpeedConversion(sizes), took))
-        #print_debug("Download speed: %0.2f %s/s\n" % (self.SpeedConversion(sizes)/took, self.units))
+        #print_debug("Download size: %0.2f MiB; Downloaded in %0.2f s\n" % (self.speed_conversion(sizes), took))
+        #print_debug("Download speed: %0.2f %s/s\n" % (self.speed_conversion(sizes)/took, self.units))
 
-    def TestSpeed(self):
+    def test_speed(self):
 
         if self.server == 'list-servers':
-            self.config = self.LoadConfig()
-            self.server_list = self.LoadServers()
-            self.ListServers(self.numTop)
+            self.config = self.load_config()
+            self.server_list = self.load_servers()
+            self.list_servers(self.numTop)
             return
 
         if self.server == '':
-            self.config = self.LoadConfig()
-            self.server_list = self.LoadServers()
-            self.FindBestServer()
+            self.config = self.load_config()
+            self.server_list = self.load_servers()
+            self.find_best_server()
 
-        self.TestDownload()
-        self.TestUpload()
+        self.test_download()
+        self.test_upload()
 
         print_result("%0.2f,%0.2f,\"%s\",\"%s\"\n" % (self.down_speed, self.up_speed, self.units, self.servers))
 
-    def ListServers(self, num=0):
+    def list_servers(self, num=0):
 
-        allSorted = self.Closest([self.config['lat'], self.config['lon']], self.server_list, num)
+        allSorted = self.closest([self.config['lat'], self.config['lon']], self.server_list, num)
 
         for i in range(0, len(allSorted)):
             print_result("%s. %s (%s, %s, %s) [%0.2f km]\n" %
