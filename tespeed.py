@@ -105,7 +105,7 @@ class TeSpeed(object):
     def closest(self, center, points, num=5):
     # Returns object that is closest to center
         closest = {}
-        for p in range(len(points)):
+        for p in xrange(len(points)):
             now = self.distance(center, [points[p]['lat'], points[p]['lon']])
             points[p]['distance'] = now
             while True:
@@ -144,7 +144,7 @@ class TeSpeed(object):
             else:
                 largest = -1
 
-                for x in range(len(po)):
+                for x in xrange(len(po)):
                     if largest < 0:
                         if now < po[x]['latency']:
                             largest = x
@@ -164,7 +164,7 @@ class TeSpeed(object):
 
         average_time = 0
         total = 0
-        for i in range(self.latencycount):
+        for i in xrange(self.latencycount):
             error = 0
             start_time = time.time()
             try:
@@ -198,7 +198,7 @@ class TeSpeed(object):
             return
         d[num] = bytes_so_far
         down = 0
-        for i in range(th):
+        for i in xrange(th):
             down = down + d.get(i, 0)
 
         if num == 0 or down >= total_size * th:
@@ -361,7 +361,7 @@ class TeSpeed(object):
             connection['connection'].start()
             connections.append(connection)
 
-        for c in range(num):
+        for c in xrange(num):
             connections[c]['size'], connections[c]['start'], connections[c]['end'] = connections[c]['parent'].recv()
             connections[c]['connection'].join()
 
@@ -371,7 +371,7 @@ class TeSpeed(object):
 
         sizes = 0
         #tspeed=0
-        for c in range(num):
+        for c in xrange(num):
             if connections[c]['end'] is not False:
                 #tspeed=tspeed+(connections[c]['size']/(connections[c]['end']-connections[c]['start']))
                 sizes = sizes + connections[c]['size']
@@ -398,7 +398,7 @@ class TeSpeed(object):
 
         sizes, took = [0, 0]
         data = ''
-        for i in range(0, len(self.UPLOAD_SIZES)):
+        for i in xrange(0, len(self.UPLOAD_SIZES)):
             if len(data) == 0 or self.UPLOAD_SIZES[i] != self.UPLOAD_SIZES[i-1]:
                 #self.log.debug('Generating new string to upload. Length: %d\n' % (self.UPLOAD_SIZES[i]))
                 data = ''.join('1' for x in xrange(self.UPLOAD_SIZES[i]))
