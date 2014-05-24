@@ -202,7 +202,7 @@ class TeSpeed(object):
         return [sizes, end_time - start_time]
 
     def load_config(self):
-        """Load the configuration file and return it as a dictionary."""
+        """Load the configuration file."""
         self.log.debug('Loading speedtest configuration...\n')
         uri = 'http://speedtest.net/speedtest-config.php?x=' + str(time.time())
         request = self.get_request(uri)
@@ -210,14 +210,13 @@ class TeSpeed(object):
 
         # Load etree from XML data
         client = etree.fromstring(decompress_response(response)).find('client')
-        config_dict = {
+        self.config = {
             'ip': client.attrib['ip'],
             'isp': client.attrib['isp'],
             'lat': float(client.attrib['lat']),
             'lon': float(client.attrib['lon'])
         }
-        self.log.debug('IP: {ip}; Lat: {lat}; Lon: {lon}; ISP: {isp}\n'.format(**config_dict))
-        return config_dict
+        self.log.debug('IP: {ip}; Lat: {lat}; Lon: {lon}; ISP: {isp}\n'.format(**self.config))
 
     def find_best_server(self):
         self.log.debug('Looking for closest and best server...\n')
@@ -226,7 +225,7 @@ class TeSpeed(object):
         self.servers.extend(server['url'] for server in best_servers)
 
     def load_servers(self):
-        """Load and return server list."""
+        """Load server list."""
         self.log.debug('Loading server list...\n')
         uri = 'http://speedtest.net/speedtest-servers.php?x=' + str(time.time())
         request = self.get_request(uri)
@@ -234,7 +233,7 @@ class TeSpeed(object):
 
         # Load etree from XML data
         servers_xml = etree.fromstring(decompress_response(response))
-        return [
+        self.server_list = [
             {
                 'lat': float(server.attrib['lat']),
                 'lon': float(server.attrib['lon']),
@@ -342,13 +341,13 @@ class TeSpeed(object):
 
     def run_tests(self):
         if self.server == 'list-servers':
-            self.config = self.load_config()
-            self.server_list = self.load_servers()
+            self.load_config()
+            self.load_servers()
             self.list_servers(self.num_top)
         else:
             if not self.server:
-                self.config = self.load_config()
-                self.server_list = self.load_servers()
+                self.load_config()
+                self.load_servers()
                 self.find_best_server()
             download_speed = self.test_download()
             upload_speed = self.test_upload()
