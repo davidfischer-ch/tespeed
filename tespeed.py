@@ -94,7 +94,7 @@ class TeSpeed(object):
             d[num] = bytes_so_far
             down = 0
             for i in xrange(num_threads):
-                down = down + d.get(i, 0)
+                down += d.get(i, 0)
             if num == 0 or down >= total_size * num_threads:
                 percent = round(down / (total_size * num_threads) * 100, 2)
                 self.log.debug('Downloaded %d of %d bytes (%0.2f%%) in %d threads\r' %
