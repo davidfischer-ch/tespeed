@@ -80,6 +80,9 @@ class TeSpeed(object):
         self.latency_count = 10
         self.post_data = ''
 
+    def convert_size(self, value):
+        return value / 1024 ** 2 * (1 if self.unit == 1 else 1.048576 * 8)
+
     def get_request(self, uri):
         """Generate a GET request to be used with urlopen."""
         return urllib2.Request(uri, headers=self.HEADERS)
@@ -253,9 +256,6 @@ class TeSpeed(object):
                             (i + 1, all_sorted[i]['url'], all_sorted[i]['sponsor'], all_sorted[i]['name'],
                              all_sorted[i]['country'], all_sorted[i]['distance']))
 
-    def speed_conversion(self, data):
-        return data / 1024 ** 2 * (1 if self.unit == 1 else 1.048576 * 8)
-
     def test_latency(self, servers):
         """Find servers with lowest latency."""
         self.log.debug('Testing latency...\n')
@@ -307,7 +307,7 @@ class TeSpeed(object):
             if sizes == 0:
                 continue
 
-            size = self.speed_conversion(sizes)  # FIXME rename sizes to something more meaningful
+            size = self.convert_size(sizes)  # FIXME rename sizes to something more meaningful
             speed = size / took
             max_speed = max(speed, max_speed)
             self.log.debug('Download size: %0.2f MiB; Downloaded in %0.2f s\n' % (size, took))
@@ -330,7 +330,7 @@ class TeSpeed(object):
             if sizes == 0:
                 continue
 
-            size = self.speed_conversion(sizes)  # FIXME rename sizes to something more meaningful
+            size = self.convert_size(sizes)  # FIXME rename sizes to something more meaningful
             speed = size / took
             max_speed = max(speed, max_speed)
             self.log.debug('Upload size: %0.2f MiB; Uploaded in %0.2f s\n' % (size, took))
