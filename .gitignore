@@ -1,4 +1,6 @@
-old/
+build/
+dist/
+*.egg*
 *~
 ~
 *.pyc

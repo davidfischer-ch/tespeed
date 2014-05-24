@@ -6,13 +6,11 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import gzip, socket, sys
+import gzip, socket, socks, sys
 from math import radians, cos, sin, asin, sqrt
-from SocksiPy import socks
 from StringIO import StringIO
 
 __all__ = (
-    'socks', 'StringIO',  # also include things from other modules
     'CallbackStringIO', 'Log', 'closest', 'decompress_response', 'distance', 'num_download_threads_for',
     'num_upload_threads_for', 'set_proxy'
 )
@@ -156,6 +154,6 @@ def num_upload_threads_for(num_uploads):
 
 
 # Thanks to Ryan Sears for http://bit.ly/17HhSli
-def set_proxy(typ=socks.PROXY_TYPE_SOCKS4, host='127.0.0.1', port=9050):
-    socks.setdefaultproxy(typ, host, port)
+def set_proxy(version, host='127.0.0.1', port=9050):
+    socks.setdefaultproxy(getattr(socks, 'PROXY_TYPE_SOCKS' + version), host, port)
     socket.socket = socks.socksocket
