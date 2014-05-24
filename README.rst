@@ -15,8 +15,8 @@ this one a bit better working in time.
 
 Let's call this version 0.1.0-alpha
 
-Of course, this script could not work like this without the best speed testing site out there -
-http://www.speedtest.net/
+Of course, this script could not work like this without the best speed testing site out there - http://www.speedtest.net/
+
 Support them in any way you can (going to their website and clicking on ads could probably make them a bit happier). :)
 
 ------------
@@ -46,9 +46,10 @@ Usage
 
 ::
 
-    usage: tespeed.py [-h] [-ls [LISTSERVERS]] [-w] [-s] [-mib] [-n [SERVERCOUNT]]
-                      [-p [USE_PROXY]] [-ph [PROXY_HOST]] [-pp [PROXY_PORT]]
-                      [server]
+    usage: tespeed [-h] [-ls [LIST_SERVERS]] [-w] [-s] [-mib] [-n [SERVER_COUNT]]
+                   [-p [USE_PROXY]] [-ph [PROXY_HOST]] [-pp [PROXY_PORT]]
+                   [-cs [CHUNK_SIZE]]
+                   [server]
 
     TeSpeed, CLI SpeedTest.net
 
@@ -58,24 +59,24 @@ Usage
 
     optional arguments:
       -h, --help            show this help message and exit
-      -ls [LISTSERVERS], --list-servers [LISTSERVERS]
+      -ls [LIST_SERVERS], --list-servers [LIST_SERVERS]
                             List the servers sorted by distance, nearest first.
                             Optionally specify number of servers to show.
       -w, --csv             Print CSV formated output to STDOUT.
       -s, --suppress        Suppress debugging (STDERR) output.
       -mib, --mebibit       Show results in mebibits.
-      -n [SERVERCOUNT], --server-count [SERVERCOUNT]
+      -n [SERVER_COUNT], --server-count [SERVER_COUNT]
                             Specify how many different servers should be used in
-                            paralel. (Defaults to 1.) (Increase it for >100Mbit
+                            parallel. (Default: 1) (Increase it for >100Mbit
                             testing.)
       -p [USE_PROXY], --proxy [USE_PROXY]
                             Specify 4 or 5 to use SOCKS4 or SOCKS5 proxy.
       -ph [PROXY_HOST], --proxy-host [PROXY_HOST]
-                            Specify socks proxy host (defaults to 127.0.0.1).
+                            Specify socks proxy host. (Default: 127.0.0.1)
       -pp [PROXY_PORT], --proxy-port [PROXY_PORT]
-                            Specify socks proxy port (defaults to 9050).
-      -cs [CHUNKSIZE], --chunk-size [CHUNKSIZE]
-                            Specify chunk size after wich tespeed calculates
+                            Specify socks proxy port. (Default: 9050)
+      -cs [CHUNK_SIZE], --chunk-size [CHUNK_SIZE]
+                            Specify chunk size after which tespeed calculates
                             speed. Increase this number 4 or 5 times if you use
                             weak hardware like RaspberryPi. (Default: 10240)
 
