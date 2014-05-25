@@ -78,6 +78,9 @@ class TeSpeed(object):
         self.latency_count = 10
         self.post_data = ''
 
+        self._config = None
+        self._server_list = None
+
     def convert_size(self, value):
         return value / 1024 ** 2 * (1 if self.unit == 1 else 1.048576 * 8)
 
@@ -173,85 +176,79 @@ class TeSpeed(object):
             connection['connection'].start()
             connections.append(connection)
 
-        for c in xrange(num):
-            connections[c]['size'], connections[c]['start'], connections[c]['end'] = connections[c]['parent'].recv()
-            connections[c]['connection'].join()
+        for i in xrange(num):
+            connections[i]['size'], connections[i]['start'], connections[i]['end'] = connections[i]['parent'].recv()
+            connections[i]['connection'].join()
 
         end_time = time.time()
 
         self.log.debug(Log.BLANK_LINE)
 
         sizes = 0
-        for c in xrange(num):
-            if connections[c]['end'] is not False:
-                sizes += connections[c]['size']
+        for i in xrange(num):
+            if connections[i]['end'] is not False:
+                sizes += connections[i]['size']
 
                 # Using more precise times for downloads
                 if upload == 0:
-                    if c == 0:
-                        start_time = connections[c]['start']
-                        end_time = connections[c]['end']
+                    if i == 0:
+                        start_time = connections[i]['start']
+                        end_time = connections[i]['end']
                     else:
-                        if connections[c]['start'] < start_time:
-                            start_time = connections[c]['start']
-                        if connections[c]['end'] > end_time:
-                            end_time = connections[c]['end']
+                        if connections[i]['start'] < start_time:
+                            start_time = connections[i]['start']
+                        if connections[i]['end'] > end_time:
+                            end_time = connections[i]['end']
 
         return [sizes, end_time - start_time]
 
-    def load_config(self):
-        """Load the configuration file."""
-        self.log.debug('Loading speedtest configuration...\n')
-        uri = 'http://speedtest.net/speedtest-config.php?x=' + str(time.time())
-        request = self.get_request(uri)
-        response = urllib2.urlopen(request)
+    def config(self, force_reload=False):
+        """Return the configuration loaded from the speedtest.net server API."""
+        if not self._config or force_reload:
+            self.log.debug('Loading the configuration...\n')
+            uri = 'http://speedtest.net/speedtest-config.php?x=' + str(time.time())
+            response = urllib2.urlopen(self.get_request(uri))
+            client = etree.fromstring(decompress_response(response)).find('client')
+            self._config = {
+                'ip': client.attrib['ip'],
+                'isp': client.attrib['isp'],
+                'lat': float(client.attrib['lat']),
+                'lon': float(client.attrib['lon'])
+            }
+            self.log.debug('IP: {ip}; Lat: {lat}; Lon: {lon}; ISP: {isp}\n'.format(**self._config))
+        return self._config
 
-        # Load etree from XML data
-        client = etree.fromstring(decompress_response(response)).find('client')
-        self.config = {
-            'ip': client.attrib['ip'],
-            'isp': client.attrib['isp'],
-            'lat': float(client.attrib['lat']),
-            'lon': float(client.attrib['lon'])
-        }
-        self.log.debug('IP: {ip}; Lat: {lat}; Lon: {lon}; ISP: {isp}\n'.format(**self.config))
+    def server_list(self, force_reload=False):
+        """Return the list of servers loaded from the speedtest.net server API."""
+        if not self._server_list or force_reload:
+            self.log.debug('Loading the list of servers...\n')
+            uri = 'http://speedtest.net/speedtest-servers.php?x=' + str(time.time())
+            response = urllib2.urlopen(self.get_request(uri))
+            servers_xml = etree.fromstring(decompress_response(response))
+            self._server_list = [
+                {
+                    'lat': float(server.attrib['lat']),
+                    'lon': float(server.attrib['lon']),
+                    'url': server.attrib['url'].rsplit('/', 1)[0] + '/',
+                    #'url2': server.attrib['url2'].rsplit('/', 1)[0] + '/',
+                    'name': server.attrib['name'],
+                    'country': server.attrib['country'],
+                    'sponsor': server.attrib['sponsor'],
+                    'id': server.attrib['id'],
+                } for server in servers_xml.find('servers').findall('server')
+            ]
+        return self._server_list
 
-    def find_best_server(self):
-        self.log.debug('Looking for closest and best server...\n')
-        best_servers = self.test_latency(closest([self.config['lat'], self.config['lon']], self.server_list,
+    def find_best_servers(self):
+        self.log.debug('Looking for closest and best servers...\n')
+        best_servers = self.test_latency(closest([self.config()['lat'], self.config()['lon']], self.server_list(),
                                          self.best_servers))
         self.servers.extend(server['url'] for server in best_servers)
 
-    def load_servers(self):
-        """Load server list."""
-        self.log.debug('Loading server list...\n')
-        uri = 'http://speedtest.net/speedtest-servers.php?x=' + str(time.time())
-        request = self.get_request(uri)
-        response = urllib2.urlopen(request)
-
-        # Load etree from XML data
-        servers_xml = etree.fromstring(decompress_response(response))
-        self.server_list = [
-            {
-                'lat': float(server.attrib['lat']),
-                'lon': float(server.attrib['lon']),
-                'url': server.attrib['url'].rsplit('/', 1)[0] + '/',
-                #'url2': server.attrib['url2'].rsplit('/', 1)[0] + '/',
-                'name': server.attrib['name'],
-                'country': server.attrib['country'],
-                'sponsor': server.attrib['sponsor'],
-                'id': server.attrib['id'],
-            } for server in servers_xml.find('servers').findall('server')
-        ]
-
     def list_servers(self, num=0):
-
-        all_sorted = closest([self.config['lat'], self.config['lon']], self.server_list, num)
-
-        for i in xrange(len(all_sorted)):
-            self.log.result('%s. %s (%s, %s, %s) [%0.2f km]\n' %
-                            (i + 1, all_sorted[i]['url'], all_sorted[i]['sponsor'], all_sorted[i]['name'],
-                             all_sorted[i]['country'], all_sorted[i]['distance']))
+        for i, server in enumerate(closest([self.config()['lat'], self.config()['lon']], self.server_list(), num), 1):
+            self.log.result('%s. %s (%s, %s, %s) [%0.2f km]\n' % (i, server['url'], server['sponsor'], server['name'],
+                            server['country'], server['distance']))
 
     def test_latency(self, servers):
         """Find servers with lowest latency."""
@@ -261,9 +258,8 @@ class TeSpeed(object):
             latency = self.test_single_latency(server['url'] + 'latency.txt?x=' + str(time.time())) * 1000
             if not latency:
                 continue
-            self.log.debug('%0.0f ms latency for %s (%s, %s, %s) [%0.2f km]\n' %
-                           (latency, server['url'], server['sponsor'], server['name'], server['country'],
-                            server['distance']))
+            self.log.debug('%0.0f ms latency for %s (%s, %s, %s) [%0.2f km]\n' % (latency, server['url'],
+                           server['sponsor'], server['name'], server['country'], server['distance']))
             server['latency'] = latency
             # Pick specified amount of servers with best latency for testing
             if int(len(po)) < int(self.num_servers):
@@ -297,10 +293,9 @@ class TeSpeed(object):
     def test_download(self):
         """Test download speed."""
         max_speed = -1
-        for i in xrange(len(self.DOWNLOAD_LIST)):
-            url = 'random' + self.DOWNLOAD_LIST[i] + '.jpg?x=' + str(time.time()) + '&y=3'
-
-            sizes, took = self.async_request(url, num_download_threads_for(i))
+        for counter, download in enumerate(self.DOWNLOAD_LIST):
+            url = 'random' + download + '.jpg?x=' + str(time.time()) + '&y=3'
+            sizes, took = self.async_request(url, num_download_threads_for(counter))
             if sizes == 0:
                 continue
 
@@ -339,14 +334,10 @@ class TeSpeed(object):
 
     def run_tests(self):
         if self.server == 'list-servers':
-            self.load_config()
-            self.load_servers()
             self.list_servers(self.num_top)
         else:
             if not self.server:
-                self.load_config()
-                self.load_servers()
-                self.find_best_server()
+                self.find_best_servers()
             download_speed = self.test_download()
             upload_speed = self.test_upload()
             self.log.result('%0.2f,%0.2f,"%s","%s"\n' % (download_speed, upload_speed, self.units, self.servers))
